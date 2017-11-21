@@ -1,37 +1,110 @@
-## Welcome to GitHub Pages
+# Introduction to I<sup>2</sup>C and the LCD Display
 
-You can use the [editor on GitHub](https://github.com/SSG-DRD-IOT/lab-IP-to-LCD-Arduino/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+## Objective
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+The objective of this lab is a learn the basics of an example that get the IP address of the current Linux based IoT device and displays it on the LCD.
 
-### Markdown
+## Hardware requirements
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+Module | Pin
+--- | ---
+LCD Display | Any I<sup>2</sup>C Port
 
-```markdown
-Syntax highlighted code block
+![](./images/action.png) Connect **LCD Display** to Any I<sup>2</sup>C Port.
 
-# Header 1
-## Header 2
-### Header 3
+## I<sup>2</sup>C using the Arduino API
+Create a new project
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
 
-- Bulleted
-- List
+#include "jhd1313m1.h"
+#include "upm.h"
+#include "upm_utilities.h"
+#include "signal.h"
+#include "string.h"
 
-1. Numbered
-2. List
+char str1[1];
 
-**Bold** and _Italic_ and `Code` text
+char *get_ip_address(){
+  char *addr;
+  struct ifaddrs *ifaddr, *ifa;
+  struct sockaddr_in *sa;
+  
+  if (getifaddrs( & ifaddr) == -1) {
+    perror("getifaddrs");
+    exit(EXIT_FAILURE);
+  }
 
-[Link](url) and ![Image](src)
+  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+    if (ifa->ifa_addr == NULL)
+      continue;
+
+    if (ifa->ifa_addr->sa_family == AF_INET) {
+      str1[0] = ifa->ifa_name[0];
+      if (strcmp(str1, "e") == 0) {
+
+        sa = (struct sockaddr_in * ) ifa->ifa_addr;
+        addr = inet_ntoa(sa->sin_addr);
+        printf("Interface: %s\tAddress: %s\n", ifa->ifa_name, addr);
+
+      };
+    }
+  }
+
+  freeifaddrs(ifaddr);
+  return addr;
+}
+
+int main() {
+
+  // Set the subplatform
+  mraa_add_subplatform(MRAA_GROVEPI, "0");
+  
+  // Get the IP address of the Up2 Board
+  char *addr = get_ip_address();
+
+
+  // initialize a JHD1313m1 on I2C bus 0, LCD address 0x3e, RGB
+  // address 0x62
+  jhd1313m1_context lcd = jhd1313m1_init(0, 0x3e, 0x62);
+
+  if (!lcd) {
+    printf("jhd1313m1_i2c_init() failed\n");
+    return 1;
+  }
+
+  char str2[20];
+
+  snprintf(str2, sizeof(str2), "%s", addr);
+
+  jhd1313m1_set_cursor(lcd, 0, 2);
+
+  jhd1313m1_write(lcd, "IP Address", strlen("IP Address"));
+
+  jhd1313m1_set_cursor(lcd, 1, 2);
+
+  jhd1313m1_write(lcd, str2, strlen(str2));
+
+  // Change the color to Intel Blue ;)
+  uint8_t r = 0;
+  uint8_t g = 113;
+  uint8_t b = 197;
+
+  jhd1313m1_set_color(lcd, r, g, b);
+
+  upm_delay(1);
+
+
+  return 0;
+}
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+## Additional resources
+Information, community forums, articles, tutorials and more can be found at the [Intel Developer Zone](https://software.intel.com/iot).
 
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/SSG-DRD-IOT/lab-IP-to-LCD-Arduino/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+For reference code for any sensor/actuator from the Grove* IoT Commercial Developer Kit, visit [https://software.intel.com/en-us/iot/hardware/sensors](https://software.intel.com/en-us/iot/hardware/sensors)

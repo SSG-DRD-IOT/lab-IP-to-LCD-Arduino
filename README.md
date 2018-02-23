@@ -12,7 +12,7 @@ LCD Display | Any I<sup>2</sup>C Port
 
 ![](./images/action.png) Connect **LCD Display** to Any I<sup>2</sup>C Port.
 
-## I<sup>2</sup>C using the Arduino API
+## I<sup>2</sup>C using the MRAA API
 Create a new project
 ```c
 #include <stdio.h>
@@ -103,6 +103,48 @@ int main() {
   return 0;
 }
 ```
+## Using the Arduino API
+```c++
+#include "jhd1313m1.hpp"
+#include "Arduino.h"
+
+// initialize a JHD1313m1 on I2C bus 0, LCD address 0x3e, RGB
+// address 0x62
+
+void setup() {
+
+  // Set the subplatform
+  mraa_add_subplatform(MRAA_GROVEPI, "0");
+
+  upm::Jhd1313m1 lcd(0, 0x3e, 0x62);
+
+  // Get the IP address of the Up2 Board
+  String addr = System.runShellCommand("hostname -I | cut -f1 -d \" \"");
+
+  CloudSerial.begin(115200);
+  CloudSerial.println(addr);
+
+  lcd.setCursor(0, 2);
+
+  lcd.write("IP Address");
+
+  lcd.setCursor(1, 2);
+
+  lcd.write(addr.c_str());
+
+  // Change the color to Intel Blue ;)
+  uint8_t r = 0;
+  uint8_t g = 113;
+  uint8_t b = 197;
+
+  lcd.setColor(r, g, b);
+}
+
+void loop() {
+  delay(1000);
+}
+```
+
 
 ## Additional resources
 Information, community forums, articles, tutorials and more can be found at the [Intel Developer Zone](https://software.intel.com/iot).
